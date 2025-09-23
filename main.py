@@ -2,6 +2,8 @@ from qiskit import QuantumCircuit
 from qiskit.quantum_info import Clifford
 from typing import Tuple
 from gate_maps import gate_map_2, gate_map_3
+import numpy as np
+import time
 
 class CircuitBFS:
 
@@ -9,6 +11,7 @@ class CircuitBFS:
         self.n = n
         self._known_states = {}
         self.gate_map = gate_map
+        self._known_states_set = set()
 
     def bfs(self, target: Clifford):
         queue = []
@@ -20,17 +23,21 @@ class CircuitBFS:
 
             current_im_word = tuple(current_word)
             current_circuit = self.word_to_gate(current_im_word)
+
+            hsh = hash(bytes(current_circuit.tableau.data))
+            if hsh in self._known_states_set:
+                continue
+
             self._known_states[current_im_word] = current_circuit
+            self._known_states_set.add(hsh)
 
             if (current_circuit == target):
                 return current_word, current_circuit
 
             for generator in self.gate_map.keys():
                 next_word = current_word + [generator]
-                next_circuit = self.word_to_gate(tuple(next_word))
+                queue.append(next_word)
 
-                if (next_circuit not in self._known_states.values()):
-                    queue.append(next_word)
         return None, None
 
 
@@ -49,18 +56,17 @@ class CircuitBFS:
 def get_sample_target(n):
     qc = QuantumCircuit(n)
     qc.h(0)
-    qc.h(1)
-    qc.h(1)
-    qc.h(2)
-    qc.cx(1, 0)
-    qc.h(1)
+    qc.cx(0, 1)
+    qc.cx(1, 2)
     qc.h(0)
-    qc.cx(1, 0)
+    qc.cx(0, 2)
     return Clifford(qc)
 
 if __name__=='__main__':
     n = 3
     target = get_sample_target(n)
     qbfs = CircuitBFS(n, gate_map_3)
+    start_time = time.time()
     word, circuit = qbfs.bfs(target)
     print(word)
+    print(f'Ran for {(time.time() - start_time)} seconds')
