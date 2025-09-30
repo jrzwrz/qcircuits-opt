@@ -31,15 +31,16 @@ def get_generators(n: int):
     return generators
 
 
-def clifford_key(cliff):
-    return cliff.tableau.tobytes()
-
 class Node:
     def __init__(self, clifford, name=""):
         self.clifford = clifford
-        self.key = clifford_key(clifford)
         self.edges = {}  # generator_name -> neighbor Node
         self.name = name  # optional: keep track of generator used
+        self.key = self.get_clifford_key()
+
+    def get_clifford_key(self):
+        return self.clifford.tableau.tobytes()
+
 
 def build_cayley_graph(generators, start, max_nodes=None):
     start_node = Node(start, "identity")
@@ -53,15 +54,16 @@ def build_cayley_graph(generators, start, max_nodes=None):
 
         for gen_name, gen_op in generators:
             new_cliff = current.clifford.compose(gen_op)
-            new_key = clifford_key(new_cliff)
+            #new_key = clifford_key(new_cliff)
+            new_node = Node(new_cliff, gen_name)
 
-            if new_key not in nodes:
+            if new_node.key not in nodes:
                 new_node = Node(new_cliff, gen_name)
-                nodes[new_key] = new_node
+                nodes[new_node.key] = new_node
                 queue.append(new_node)
 
             # connect edge
-            current.edges[gen_name] = nodes[new_key]
+            current.edges[gen_name] = nodes[new_node.key]
 
         if max_nodes and len(nodes) >= max_nodes:
             break
