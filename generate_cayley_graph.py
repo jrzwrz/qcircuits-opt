@@ -1,5 +1,6 @@
 from qiskit.quantum_info import Clifford
 from qiskit import QuantumCircuit
+import pickle
 import time
 
 def H(pos, num):
@@ -18,16 +19,14 @@ def CX(ctrl, tgt, num):
 #Based on number of circuits, we have the following generators:
 def get_generators(n: int):
     H_n = [ ('H'+str(i), H(i,n)) for i in range(n)]
-
-    # not used?
-    #S_n = [('S'+str(i), S(i,n)) for i in range(n)]
+    S_n = [('S'+str(i), S(i,n)) for i in range(n)]
 
     CX_ijn = []
     for i in range(n):
         for j in range(n):
             if i!=j: CX_ijn.append(('CX'+str(i)+str(j),CX(i,j,n)))
 
-    generators = H_n+CX_ijn
+    generators = H_n+S_n+CX_ijn
     return generators
 
 
@@ -54,7 +53,6 @@ def build_cayley_graph(generators, start, max_nodes=None):
 
         for gen_name, gen_op in generators:
             new_cliff = current.clifford.compose(gen_op)
-            #new_key = clifford_key(new_cliff)
             new_node = Node(new_cliff, gen_name)
 
             if new_node.key not in nodes:
@@ -63,7 +61,7 @@ def build_cayley_graph(generators, start, max_nodes=None):
                 queue.append(new_node)
 
             # connect edge
-            current.edges[gen_name] = nodes[new_node.key]
+            current.edges[gen_name] = new_node.key
 
         if max_nodes and len(nodes) >= max_nodes:
             break
@@ -80,5 +78,8 @@ if __name__=='__main__':
     print(f"Time elapsed: {time.time()-start}s")
 
     print("Generated nodes:", len(graph))
+
+    with open(f"cayley_graph_{n}_qubits.pkl", "wb") as f:
+        pickle.dump(graph, f)
     # for k, node in list(graph.items())[:5]:
     #     print("Node:", node.name, " | Outgoing edges:", list(node.edges.keys()))
